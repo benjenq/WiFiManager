@@ -106,8 +106,11 @@ bool WiFiManager::addParameter(WiFiManagerParameter *p) {
 
 void WiFiManager::setupConfigPortal() {
   dnsServer.reset(new DNSServer());
+#if defined(ESP8266)
   server.reset(new ESP8266WebServer(80));
-
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+  server.reset(new WebServer(80));
+#endif
   DEBUG_WM(F(""));
   _configPortalStart = millis();
 
@@ -158,7 +161,7 @@ void WiFiManager::setupConfigPortal() {
 }
 
 boolean WiFiManager::autoConnect() {
-  String ssid = "ESP" + String(ESP.getChipId());
+  String ssid = "ESP" + String(ESP_getChipId());
   return autoConnect(ssid.c_str(), NULL);
 }
 
@@ -184,7 +187,11 @@ boolean WiFiManager::autoConnect(char const *apName, char const *apPassword) {
 }
 
 boolean WiFiManager::configPortalHasTimeout(){
+#if defined(ESP8266)
     if(_configPortalTimeout == 0 || wifi_softap_get_station_num() > 0){
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+    if(_configPortalTimeout == 0){  // TODO :
+#endif
       _configPortalStart = millis(); // kludge, bump configportal start time to skew timeouts
       return false;
     }
@@ -192,7 +199,7 @@ boolean WiFiManager::configPortalHasTimeout(){
 }
 
 boolean WiFiManager::startConfigPortal() {
-  String ssid = "ESP" + String(ESP.getChipId());
+  String ssid = "ESP" + String(ESP_getChipId());
   return startConfigPortal(ssid.c_str(), NULL);
 }
 
@@ -293,11 +300,14 @@ int WiFiManager::connectWifi(String ssid, String pass) {
   } else {
     if (WiFi.SSID()) {
       DEBUG_WM(F("Using last saved values, should be faster"));
+#if defined(ESP8266)
       //trying to fix connection in progress hanging
       ETS_UART_INTR_DISABLE();
       wifi_station_disconnect();
       ETS_UART_INTR_ENABLE();
-
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+      esp_wifi_disconnect();
+#endif
       WiFi.begin();
     } else {
       DEBUG_WM(F("No saved credentials"));
@@ -342,9 +352,14 @@ uint8_t WiFiManager::waitForConnectResult() {
 }
 
 void WiFiManager::startWPS() {
+#if defined(ESP8266)
   DEBUG_WM(F("START WPS"));
   WiFi.beginWPSConfig();
   DEBUG_WM(F("END WPS"));
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+  // TODO: 
+  DEBUG_WM("ESP32 WPS TODO");
+#endif
 }
 /*
   String WiFiManager::getSSID() {
@@ -420,7 +435,7 @@ void WiFiManager::handleRoot() {
     return;
   }
 
-  String page = FPSTR(HTTP_HEAD);
+  String page = FPSTR(HTTP_HEADESP);
   page.replace("{v}", "Options");
   page += FPSTR(HTTP_SCRIPT);
   page += FPSTR(HTTP_STYLE);
@@ -441,7 +456,7 @@ void WiFiManager::handleRoot() {
 /** Wifi config page handler */
 void WiFiManager::handleWifi(boolean scan) {
 
-  String page = FPSTR(HTTP_HEAD);
+  String page = FPSTR(HTTP_HEADESP);
   page.replace("{v}", "Config ESP");
   page += FPSTR(HTTP_SCRIPT);
   page += FPSTR(HTTP_STYLE);
@@ -506,7 +521,11 @@ void WiFiManager::handleWifi(boolean scan) {
           rssiQ += quality;
           item.replace("{v}", WiFi.SSID(indices[i]));
           item.replace("{r}", rssiQ);
+#if defined(ESP8266)
           if (WiFi.encryptionType(indices[i]) != ENC_TYPE_NONE) {
+#else
+          if (WiFi.encryptionType(indices[i]) != WIFI_AUTH_OPEN) {
+#endif
             item.replace("{i}", "l");
           } else {
             item.replace("{i}", "");
@@ -636,7 +655,7 @@ void WiFiManager::handleWifiSave() {
     optionalIPFromString(&_sta_static_sn, sn.c_str());
   }
 
-  String page = FPSTR(HTTP_HEAD);
+  String page = FPSTR(HTTP_HEADESP);
   page.replace("{v}", "Credentials Saved");
   page += FPSTR(HTTP_SCRIPT);
   page += FPSTR(HTTP_STYLE);
@@ -657,7 +676,7 @@ void WiFiManager::handleWifiSave() {
 void WiFiManager::handleInfo() {
   DEBUG_WM(F("Info"));
 
-  String page = FPSTR(HTTP_HEAD);
+  String page = FPSTR(HTTP_HEADESP);
   page.replace("{v}", "Info");
   page += FPSTR(HTTP_SCRIPT);
   page += FPSTR(HTTP_STYLE);
@@ -665,16 +684,26 @@ void WiFiManager::handleInfo() {
   page += FPSTR(HTTP_HEAD_END);
   page += F("<dl>");
   page += F("<dt>Chip ID</dt><dd>");
-  page += ESP.getChipId();
+  page += ESP_getChipId();
   page += F("</dd>");
   page += F("<dt>Flash Chip ID</dt><dd>");
+#if defined(ESP8266)
   page += ESP.getFlashChipId();
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+  // TODO
+  page += F("TODO:");
+#endif
   page += F("</dd>");
   page += F("<dt>IDE Flash Size</dt><dd>");
   page += ESP.getFlashChipSize();
   page += F(" bytes</dd>");
   page += F("<dt>Real Flash Size</dt><dd>");
+#if defined(ESP8266)
   page += ESP.getFlashChipRealSize();
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+  // TODO
+  page += F("TODO:");
+#endif
   page += F(" bytes</dd>");
   page += F("<dt>Soft AP IP</dt><dd>");
   page += WiFi.softAPIP().toString();
@@ -698,13 +727,13 @@ void WiFiManager::handleInfo() {
 void WiFiManager::handleReset() {
   DEBUG_WM(F("Reset"));
 
-  String page = FPSTR(HTTP_HEAD);
+  String page = FPSTR(HTTP_HEADESP);
   page.replace("{v}", "Info");
   page += FPSTR(HTTP_SCRIPT);
   page += FPSTR(HTTP_STYLE);
   page += _customHeadElement;
   page += FPSTR(HTTP_HEAD_END);
-  page += F("Module will reset in a few seconds.");
+  page += FPSTR(HTTP_RESET_MSG);
   page += FPSTR(HTTP_END);
 
   server->sendHeader("Content-Length", String(page.length()));
@@ -712,7 +741,11 @@ void WiFiManager::handleReset() {
 
   DEBUG_WM(F("Sent reset page"));
   delay(5000);
+#if defined(ESP8266)
   ESP.reset();
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+  ESP.restart();
+#endif
   delay(2000);
 }
 

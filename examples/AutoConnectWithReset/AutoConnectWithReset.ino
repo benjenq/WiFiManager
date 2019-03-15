@@ -1,11 +1,15 @@
 #include <FS.h>                   //this needs to be first, or it all crashes and burns...
 
-#include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
-
+#if defined(ESP8266)
+  #include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
+  #include <ESP8266WebServer.h>
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+  #include <WiFi.h>
+  #include <WebServer.h>
+#endif
 //needed for library
 #include <DNSServer.h>
-#include <ESP8266WebServer.h>
-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
 void setup() {
   // put your setup code here, to run once:
@@ -30,7 +34,11 @@ void setup() {
   if (!wifiManager.autoConnect("AutoConnectAP", "password")) {
     Serial.println("failed to connect, we should reset as see if it connects");
     delay(3000);
+#if defined(ESP8266)
     ESP.reset();
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+    ESP.restart();
+#endif
     delay(5000);
   }
 

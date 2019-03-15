@@ -1,11 +1,16 @@
 #include <FS.h>                   //this needs to be first, or it all crashes and burns...
 
-#include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
-
+#if defined(ESP8266)
+  #include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
+  #include <ESP8266WebServer.h>
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+  #include <WiFi.h>
+  #include <WebServer.h>
+  #include <SPIFFS.h>
+#endif
 //needed for library
 #include <DNSServer.h>
-#include <ESP8266WebServer.h>
-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
 
@@ -86,8 +91,8 @@ void setup() {
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
   //set static ip
-  wifiManager.setSTAStaticIPConfig(IPAddress(10,0,1,99), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
-  
+  wifiManager.setSTAStaticIPConfig(IPAddress(10, 0, 1, 99), IPAddress(10, 0, 1, 1), IPAddress(255, 255, 255, 0));
+
   //add all your parameters here
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&custom_mqtt_port);
@@ -99,7 +104,7 @@ void setup() {
   //set minimu quality of signal so it ignores AP's under that quality
   //defaults to 8%
   //wifiManager.setMinimumSignalQuality();
-  
+
   //sets timeout until configuration portal gets turned off
   //useful to make it all retry or go to sleep
   //in seconds
@@ -113,7 +118,11 @@ void setup() {
     Serial.println("failed to connect and hit timeout");
     delay(3000);
     //reset and try again, or maybe put it to deep sleep
+#if defined(ESP8266)
     ESP.reset();
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+    ESP.restart();
+#endif
     delay(5000);
   }
 

@@ -1,9 +1,13 @@
-#include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
-
+#if defined(ESP8266)
+  #include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
+  #include <ESP8266WebServer.h>
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+  #include <WiFi.h>
+  #include <WebServer.h>
+#endif
 //needed for library
-#include <ESP8266WebServer.h>
 #include <DNSServer.h>
-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
 // select which pin will trigger the configuration portal when set to LOW
 // ESP-01 users please note: the only pins available (0 and 2), are shared 
@@ -46,7 +50,11 @@ void loop() {
       Serial.println("failed to connect and hit timeout");
       delay(3000);
       //reset and try again, or maybe put it to deep sleep
+#if defined(ESP8266)
       ESP.reset();
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+      ESP.restart();
+#endif
       delay(5000);
     }
 

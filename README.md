@@ -1,3 +1,7 @@
+Forked from [tzapu/WiFiManager v0.14](https://github.com/tzapu/WiFiManager). Code modified for :  
+- Support ESP32 and ESP8266.
+- Localize Captive Portal (See [Wifimanager.h : 36](https://github.com/benjenq/WiFiManager/blob/master/WiFiManager.h) ).  
+
 ## Current development going on here :arrow_right: [Development Branch](https://github.com/tzapu/WiFiManager/tree/development)
 
 # WiFiManager

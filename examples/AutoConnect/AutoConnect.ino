@@ -1,8 +1,12 @@
-#include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
-
+#if defined(ESP8266)
+  #include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
+  #include <ESP8266WebServer.h>
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+  #include <WiFi.h>
+  #include <WebServer.h>
+#endif
 //needed for library
 #include <DNSServer.h>
-#include <ESP8266WebServer.h>
 #include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
 
